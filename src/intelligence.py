@@ -265,6 +265,7 @@ def extract_commitment(text: str) -> dict:
             response_format={"type": "json_object"},
             temperature=0,    # deterministic — classification, not creativity
             max_tokens=256,   # schema is small; cap spend
+            timeout=10.0,     # CRITICAL: Prevent infinite hang if API stalls
         )
 
         raw_json: str = response.choices[0].message.content
