@@ -1,0 +1,9 @@
+# Loop Closer — Virtual environment, secrets, database
+.env
+venv/
+__pycache__/
+*.pyc
+*.db
+*.db-wal
+*.db-shm
+.vscode/

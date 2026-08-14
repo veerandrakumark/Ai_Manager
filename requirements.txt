@@ -1,0 +1,20 @@
+# ============================================
+# Loop Closer — Requirements
+# ============================================
+
+# Core SDK
+caspian-sdk
+
+# Environment & Configuration
+python-dotenv>=1.0.0
+
+# Intelligence / Commitment Extraction
+openai>=1.30.0
+pydantic>=2.0.0
+
+# Web / Webhook
+flask>=3.0.0
+gunicorn>=22.0.0          # Production WSGI server (replaces Flask dev server)
+
+# Database
+psycopg2-binary>=2.9.9    # PostgreSQL driver (binary wheel — no libpq-dev needed)
