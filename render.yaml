@@ -3,49 +3,29 @@
 # ============================================================
 # Deploy with: connect this repo to Render → "New Blueprint"
 #
-# Three services are defined:
-#   1. loop-closer-webhook  — Flask/Gunicorn web service (GitHub webhook receiver)
-#   2. loop-closer-listener — Caspian SDK Slack/Telegram listener (background worker)
-#   3. loop-closer-nudge    — Cron engine that DMs overdue users (background worker)
-#
-# All env vars are marked sync:false so you fill them in the
-# Render dashboard once and they are shared across deploys.
+# Free Tier Bypass: This uses a single 'web' service to run
+# the webhook, listener, and cron engine simultaneously via start.sh
 # ============================================================
 
 services:
-
-  # ──────────────────────────────────────────────────────────
-  # 1. WEB SERVICE — GitHub Webhook (Flask + Gunicorn)
-  # ──────────────────────────────────────────────────────────
   - type: web
-    name: loop-closer-webhook
+    name: loop-closer-app
     runtime: python
-    region: oregon            # Change to match your Neon/Supabase DB region
+    region: oregon            # Matches your DB region or closest available
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 src.github_webhook:app
+    startCommand: bash start.sh
     healthCheckPath: /webhook  # Render pings this to confirm the service is up
     envVars:
+      # Database
       - key: DATABASE_URL
-        sync: false            # Paste your Neon/Supabase connection string here
+        sync: false
+      
+      # Webhook Security
       - key: GITHUB_WEBHOOK_SECRET
         sync: false
-      - key: PYTHON_VERSION
-        value: "3.11"
-
-  # ──────────────────────────────────────────────────────────
-  # 2. BACKGROUND WORKER — Caspian Slack/Telegram Listener
-  # ──────────────────────────────────────────────────────────
-  - type: worker
-    name: loop-closer-listener
-    runtime: python
-    region: oregon
-    plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: python src/main.py
-    envVars:
-      - key: DATABASE_URL
-        sync: false
+      
+      # Communication SDKs
       - key: CASPIAN_API_KEY
         sync: false
       - key: SLACK_TOKEN
@@ -54,27 +34,13 @@ services:
         sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
+        
+      # AI Model
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
         value: llama-3.3-70b-versatile
-      - key: PYTHON_VERSION
-        value: "3.11"
-
-  # ──────────────────────────────────────────────────────────
-  # 3. BACKGROUND WORKER — Cron Nudge Engine
-  # ──────────────────────────────────────────────────────────
-  - type: worker
-    name: loop-closer-nudge
-    runtime: python
-    region: oregon
-    plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: python src/cron_nudge.py
-    envVars:
-      - key: DATABASE_URL
-        sync: false
-      - key: CASPIAN_API_KEY
-        sync: false
+      
+      # System
       - key: PYTHON_VERSION
         value: "3.11"
