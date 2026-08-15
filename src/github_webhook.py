@@ -24,9 +24,13 @@ WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET")
 if not WEBHOOK_SECRET:
     print("[CRITICAL] GITHUB_WEBHOOK_SECRET is not set in the environment!", flush=True)
 
-@app.route('/webhook', methods=['POST'])
+@app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     """Handle incoming GitHub webhook events with HMAC verification."""
+    
+    # Handle Render Health Checks (GET)
+    if request.method == 'GET':
+        return "OK", 200
     
     # 1. Cryptographic Signature Verification (Intercept before business logic)
     signature_header = request.headers.get("X-Hub-Signature-256")
