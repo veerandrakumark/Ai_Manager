@@ -5,6 +5,9 @@
 # Runs the background workers and the web server simultaneously
 # to bypass Render's single-process free tier restriction.
 
+# Ensure python can import modules directly from the src/ folder
+export PYTHONPATH=src
+
 # 1. Start the Caspian SDK listener in the background
 echo "Starting Listener..."
 python src/main.py &
