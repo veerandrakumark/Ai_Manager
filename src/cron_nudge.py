@@ -53,16 +53,23 @@ def process_overdue_tasks(client: CommClient) -> None:
     if not overdue_tasks:
         return
 
-    # Fetch the active Slack connection once for the whole batch
+    # Fetch the active Slack and Telegram connections once for the whole batch
     connections = client._request("GET", "/v1/connections")
+    
     slack_conns = [
         c for c in connections
         if c.get("channel") == "slack" and c.get("status") == "active"
     ]
-    conn_id = slack_conns[0]["id"] if slack_conns else None
+    slack_conn_id = slack_conns[0]["id"] if slack_conns else None
 
-    if not conn_id:
-        print("[NUDGE] Warning: No active Slack connection found to send nudges.", flush=True)
+    telegram_conns = [
+        c for c in connections
+        if c.get("channel") == "telegram" and c.get("status") == "active"
+    ]
+    telegram_conn_id = telegram_conns[0]["id"] if telegram_conns else None
+
+    if not slack_conn_id and not telegram_conn_id:
+        print("[NUDGE] Warning: No active Slack or Telegram connection found to send nudges.", flush=True)
         return
 
     for row in overdue_tasks:
@@ -70,11 +77,12 @@ def process_overdue_tasks(client: CommClient) -> None:
         desc        = row["task_description"]
         deadline    = row["deadline_timestamp"]
         slack_handle = _parse_slack_handle(row["slack_handle"])
+        telegram_handle = row.get("telegram_handle")
 
         message_text = (
             f"⚠️ *Nudge!* You committed to: '{desc}' by {deadline}. Is this done?"
         )
-        print(f"[NUDGE] Reminding {slack_handle} about Task #{task_id}...", flush=True)
+        print(f"[NUDGE] Reminding task #{task_id}...", flush=True)
 
         # ── Optimistic lock: set status → 'nudged' BEFORE sending the DM.
         # If a second cron instance runs concurrently, it will see rowcount=0
@@ -87,18 +95,36 @@ def process_overdue_tasks(client: CommClient) -> None:
             )
             continue
 
-        # Now attempt the DM — revert status on failure so it retries next cycle
-        try:
-            client._request("POST", "/v1/messages", json={
-                "connection_id": conn_id,
-                "text": message_text,
-                "channel": slack_handle,
-            })
-            print(f"[NUDGE] Task #{task_id} nudged successfully.", flush=True)
+        # Now attempt the DM(s) — revert status on failure so it retries next cycle
+        success = False
+        
+        if slack_conn_id and slack_handle:
+            try:
+                client._request("POST", "/v1/messages", json={
+                    "connection_id": slack_conn_id,
+                    "text": message_text,
+                    "channel": slack_handle,
+                })
+                print(f"[NUDGE] Task #{task_id} nudged successfully on Slack ({slack_handle}).", flush=True)
+                success = True
+            except Exception as e:
+                print(f"[NUDGE ERROR] Slack DM failed for task #{task_id}: {e}", flush=True)
+                
+        if telegram_conn_id and telegram_handle:
+            try:
+                client._request("POST", "/v1/messages", json={
+                    "connection_id": telegram_conn_id,
+                    "text": message_text,
+                    "channel": telegram_handle,
+                })
+                print(f"[NUDGE] Task #{task_id} nudged successfully on Telegram ({telegram_handle}).", flush=True)
+                success = True
+            except Exception as e:
+                print(f"[NUDGE ERROR] Telegram DM failed for task #{task_id}: {e}", flush=True)
 
-        except Exception as e:
+        if not success:
             print(
-                f"[NUDGE ERROR] DM failed for task #{task_id}: {e}. "
+                f"[NUDGE ERROR] All DM attempts failed for task #{task_id}. "
                 "Reverting status to 'in_progress' for retry.",
                 flush=True,
             )
