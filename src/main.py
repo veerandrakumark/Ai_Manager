@@ -99,8 +99,9 @@ def main() -> None:
                 gh_match = re.search(r'github:\s*(\S+)', raw_text, re.IGNORECASE)
                 tg_match = re.search(r'telegram:\s*(\S+)', raw_text, re.IGNORECASE)
 
-                github_handle = gh_match.group(1).strip() if gh_match else None
-                telegram_handle = tg_match.group(1).strip().lower() if tg_match else None
+                # Extract and strip common markdown characters (like backticks)
+                github_handle = gh_match.group(1).strip(" `") if gh_match else None
+                telegram_handle = tg_match.group(1).strip(" `").lower() if tg_match else None
 
                 if not github_handle or not telegram_handle:
                     message.reply(
