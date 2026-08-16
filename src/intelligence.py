@@ -176,7 +176,7 @@ No extra keys. No markdown. No text outside the JSON object.
 
 def _build_system_prompt() -> str:
     """Render the system prompt with live-computed temporal values."""
-    now = datetime.now()
+    now = datetime.now() + timedelta(hours=5, minutes=30)
     default_deadline = now + timedelta(hours=24)
 
     tonight = now.replace(hour=20, minute=0, second=0, microsecond=0)

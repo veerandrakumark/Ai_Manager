@@ -140,13 +140,22 @@ def add_user(slack_handle: str,
     return row_id
 
 
-def get_user_by_slack(slack_handle: str) -> dict | None:
-    """Look up a user by their Slack handle. Returns a dict or None."""
+def get_user_by_any_handle(handle: str) -> dict | None:
+    """Look up a user by any of their known handles. Returns a dict or None."""
+    # Defensively add/remove '@' for telegram handle matching
+    alt_handle = handle[1:] if handle.startswith('@') else f"@{handle}"
+    
     with _get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
-                "SELECT * FROM users WHERE slack_handle = %s",
-                (slack_handle,),
+                """
+                SELECT * FROM users 
+                WHERE slack_handle = %s 
+                   OR telegram_handle = %s 
+                   OR telegram_handle = %s
+                   OR github_handle = %s
+                """,
+                (handle, handle, alt_handle, handle),
             )
             return cur.fetchone()
 
@@ -264,7 +273,9 @@ def get_overdue_tasks_with_users() -> list[dict]:
 
     Used exclusively by cron_nudge.py so it never touches a raw connection.
     """
-    now_local = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    from datetime import timedelta
+    # Add 5.5 hours to server's UTC time to match India Standard Time (IST)
+    now_ist = (datetime.now() + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
     with _get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
@@ -280,7 +291,7 @@ def get_overdue_tasks_with_users() -> list[dict]:
                   AND  t.deadline_timestamp IS NOT NULL
                   AND  t.deadline_timestamp < %s
                 """,
-                (now_local,),
+                (now_ist,),
             )
             return cur.fetchall()
 

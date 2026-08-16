@@ -15,7 +15,7 @@ import re
 from dotenv import load_dotenv
 from caspian_sdk import CommClient
 
-from database import init_db, add_user, add_commitment, get_user_by_slack
+from database import init_db, add_user, add_commitment, get_user_by_any_handle
 from intelligence import extract_commitment
 
 
@@ -146,8 +146,8 @@ def main() -> None:
                 flush=True,
             )
 
-            # Look up the sender in the DB by their Slack handle
-            user_row = get_user_by_slack(sender_handle)
+            # Look up the sender in the DB by their handle (Slack, Telegram, etc.)
+            user_row = get_user_by_any_handle(sender_handle)
 
             if user_row is None:
                 # Sender is not registered — prompt them to register first
