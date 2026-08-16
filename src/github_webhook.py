@@ -24,6 +24,11 @@ WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET")
 if not WEBHOOK_SECRET:
     print("[CRITICAL] GITHUB_WEBHOOK_SECRET is not set in the environment!", flush=True)
 
+@app.route('/')
+def index():
+    return "Loop Closer Webhook is running active and healthy!", 200
+
+
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     """Handle incoming GitHub webhook events with HMAC verification."""
